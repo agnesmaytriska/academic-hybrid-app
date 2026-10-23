@@ -1,0 +1,181 @@
+@page "/dosen/tambah"
+@page "/dosen/edit/{Id:int}"
+@inject DosenService DosenService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isEdit ? "Edit Dosen" : "Tambah Dosen")</PageTitle>
+
+<h1>@(_isEdit ? "Edit Dosen" : "Tambah Dosen")</h1>
+
+<NotificationAlert Message="_errorMessage"
+                   Type="NotificationType.Danger"
+                   OnDismiss="TutupPesanError" />
+
+@if (_isLoading)
+{
+    <p><em>Memuat data dosen...</em></p>
+}
+else if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <div class="alert alert-danger" role="alert">
+        @_loadError
+    </div>
+
+    <button type="button" class="btn btn-secondary" @onclick="Kembali">
+        Kembali ke Daftar
+    </button>
+}
+else
+{
+    <EditForm Model="_form" OnValidSubmit="SimpanAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger" />
+
+        <div class="mb-3">
+            <label class="form-label" for="nidn">NIDN</label>
+            <InputText id="nidn" class="form-control" @bind-Value="_form.Nidn" />
+            <ValidationMessage For="() => _form.Nidn" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="namaDosen">Nama Dosen</label>
+            <InputText id="namaDosen" class="form-control" @bind-Value="_form.NamaDosen" />
+            <ValidationMessage For="() => _form.NamaDosen" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <InputText id="email" class="form-control" @bind-Value="_form.Email" />
+            <ValidationMessage For="() => _form.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="prodi">Program Studi</label>
+            <InputText id="prodi" class="form-control" @bind-Value="_form.Prodi" />
+            <ValidationMessage For="() => _form.Prodi" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+            @(_isSaving ? "Menyimpan..." : "Simpan")
+        </button>
+
+        <button type="button" class="btn btn-secondary ms-2" disabled="@_isSaving" @onclick="Kembali">
+            Batal
+        </button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private DosenFormModel _form = new();
+    private bool _isEdit;
+    private bool _isLoading;
+    private bool _isSaving;
+    private int _loadedId = -1;
+    private string? _loadError;
+    private string? _errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isEdit = Id > 0;
+
+        if (!_isEdit)
+        {
+            if (_loadedId != 0)
+            {
+                _form = new DosenFormModel();
+                _loadedId = 0;
+                _errorMessage = null;
+            }
+
+            _loadError = null;
+            _isLoading = false;
+            return;
+        }
+
+        if (_loadedId == Id)
+        {
+            return;
+        }
+
+        _loadedId = Id;
+        await MuatDosenAsync();
+    }
+
+    private async Task MuatDosenAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        _errorMessage = null;
+        _form = new DosenFormModel();
+
+        var result = await DosenService.GetByIdAsync(Id);
+
+        if (result.IsSuccess)
+        {
+            _form = new DosenFormModel
+            {
+                Nidn = result.Data.Nidn,
+                NamaDosen = result.Data.NamaDosen,
+                Email = result.Data.Email,
+                Prodi = result.Data.Prodi
+            };
+        }
+        else
+        {
+            _loadError = result.Error;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task SimpanAsync()
+    {
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (_isEdit)
+            {
+                var result = await DosenService.UpdateAsync(Id, _form);
+
+                if (result.IsSuccess)
+                {
+                    Navigation.NavigateTo("/dosen?hasil=edit");
+                    return;
+                }
+
+                _errorMessage = result.Error;
+            }
+            else
+            {
+                var result = await DosenService.CreateAsync(_form);
+
+                if (result.IsSuccess)
+                {
+                    Navigation.NavigateTo("/dosen?hasil=tambah");
+                    return;
+                }
+
+                _errorMessage = result.Error;
+            }
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Kembali()
+    {
+        Navigation.NavigateTo("/dosen");
+    }
+
+    private void TutupPesanError()
+    {
+        _errorMessage = null;
+    }
+}

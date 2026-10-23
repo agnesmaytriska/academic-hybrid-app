@@ -1,0 +1,262 @@
+@page "/dosen"
+@inject DosenService DosenService
+@inject NavigationManager Navigation
+
+<PageTitle>Daftar Dosen</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Daftar Dosen</h1>
+    <button type="button" class="btn btn-primary" @onclick="TambahDosen">
+        Tambah Dosen
+    </button>
+</div>
+
+<NotificationAlert Message="_successMessage"
+                   Type="NotificationType.Success"
+                   OnDismiss="TutupPesanSukses" />
+
+<NotificationAlert Message="_actionError"
+                   Type="NotificationType.Danger"
+                   OnDismiss="TutupPesanError" />
+
+@if (_isLoading)
+{
+    <p><em>Memuat data dosen...</em></p>
+}
+else if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <div class="alert alert-danger" role="alert">
+        @_loadError
+    </div>
+}
+else if (_dosens.Count == 0)
+{
+    <div class="alert alert-info" role="alert">
+        Belum ada data dosen. Klik <strong>Tambah Dosen</strong> untuk menambahkan data.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">NIDN</th>
+                    <th scope="col">Nama</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Prodi</th>
+                    <th scope="col" class="text-end">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var dosen in _dosens)
+                {
+                    <tr>
+                        <td>@dosen.Nidn</td>
+                        <td>@dosen.NamaDosen</td>
+                        <td>@dosen.Email</td>
+                        <td>@dosen.Prodi</td>
+                        <td class="text-end">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary me-2"
+                                    @onclick="() => EditDosen(dosen)">
+                                Edit
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-danger"
+                                    disabled="@_isDeleting"
+                                    @onclick="() => MintaHapus(dosen)">
+                                Hapus
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_dosenToDelete is not null)
+{
+    <div class="modal fade show d-block"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="hapusDosenLabel"
+         style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hapusDosenLabel">Konfirmasi Hapus</h5>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Tutup"
+                            disabled="@_isDeleting"
+                            @onclick="BatalHapus"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Hapus dosen <strong>@_dosenToDelete.NamaDosen</strong>?
+                        Tindakan ini tidak dapat dibatalkan.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            disabled="@_isDeleting"
+                            @onclick="BatalHapus">
+                        Batal
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            disabled="@_isDeleting"
+                            @onclick="KonfirmasiHapus">
+                        @(_isDeleting ? "Menghapus..." : "Hapus")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "hasil")]
+    public string? Hasil { get; set; }
+
+    private List<DosenModel> _dosens = new();
+    private DosenModel? _dosenToDelete;
+    private bool _isLoading;
+    private bool _isDeleting;
+    private bool _sudahMemuatAwal;
+    private string? _lastHandledHasil;
+    private string? _loadError;
+    private string? _actionError;
+    private string? _successMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Hasil))
+        {
+            _lastHandledHasil = null;
+
+            if (!_sudahMemuatAwal)
+            {
+                _sudahMemuatAwal = true;
+                await MuatDosenAsync();
+            }
+
+            return;
+        }
+
+        if (string.Equals(Hasil, _lastHandledHasil, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _lastHandledHasil = Hasil;
+        _sudahMemuatAwal = true;
+
+        // Muat ulang agar daftar langsung mencerminkan data hasil tambah/edit.
+        await MuatDosenAsync();
+
+        if (string.Equals(Hasil, "tambah", StringComparison.OrdinalIgnoreCase))
+        {
+            _successMessage = "Data dosen berhasil ditambahkan.";
+        }
+        else if (string.Equals(Hasil, "edit", StringComparison.OrdinalIgnoreCase))
+        {
+            _successMessage = "Data dosen berhasil diperbarui.";
+        }
+        else
+        {
+            return;
+        }
+
+        // Bersihkan query agar refresh tidak menampilkan pesan lagi.
+        Navigation.NavigateTo("/dosen", replace: true);
+    }
+
+    private async Task MuatDosenAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        _successMessage = null;
+        _actionError = null;
+
+        var result = await DosenService.GetAllAsync();
+
+        if (result.IsSuccess)
+        {
+            _dosens = result.Data;
+        }
+        else
+        {
+            _loadError = result.Error;
+        }
+
+        _isLoading = false;
+    }
+
+    private void TambahDosen()
+    {
+        Navigation.NavigateTo("/dosen/tambah");
+    }
+
+    private void EditDosen(DosenModel dosen)
+    {
+        Navigation.NavigateTo($"/dosen/edit/{dosen.DosenId}");
+    }
+
+    private void MintaHapus(DosenModel dosen)
+    {
+        _successMessage = null;
+        _actionError = null;
+        _dosenToDelete = dosen;
+    }
+
+    private void BatalHapus()
+    {
+        if (!_isDeleting)
+        {
+            _dosenToDelete = null;
+        }
+    }
+
+    private async Task KonfirmasiHapus()
+    {
+        if (_dosenToDelete is null || _isDeleting)
+        {
+            return;
+        }
+
+        var dosen = _dosenToDelete;
+        _isDeleting = true;
+        _successMessage = null;
+        _actionError = null;
+
+        try
+        {
+            var result = await DosenService.DeleteAsync(dosen.DosenId);
+
+            if (result.IsSuccess)
+            {
+                _dosenToDelete = null;
+                await MuatDosenAsync();
+                _successMessage = $"Data dosen {dosen.NamaDosen} berhasil dihapus.";
+            }
+            else
+            {
+                // Pesan 409 dari API ditampilkan apa adanya.
+                _actionError = result.Error;
+                _dosenToDelete = null;
+            }
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+
+    private void TutupPesanSukses() => _successMessage = null;
+    private void TutupPesanError() => _actionError = null;
+}

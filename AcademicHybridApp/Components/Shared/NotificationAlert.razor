@@ -1,0 +1,34 @@
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert @CssClass alert-dismissible fade show" role="alert">
+        @Message
+        <button type="button" class="btn-close" aria-label="Tutup" @onclick="Dismiss"></button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public NotificationType Type { get; set; } = NotificationType.Info;
+
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+
+    private string CssClass => Type switch
+    {
+        NotificationType.Success => "alert-success",
+        NotificationType.Danger => "alert-danger",
+        NotificationType.Warning => "alert-warning",
+        _ => "alert-info"
+    };
+
+    private async Task Dismiss()
+    {
+        if (OnDismiss.HasDelegate)
+        {
+            await OnDismiss.InvokeAsync();
+        }
+    }
+}
