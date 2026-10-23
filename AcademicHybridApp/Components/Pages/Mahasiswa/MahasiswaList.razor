@@ -1,0 +1,279 @@
+@page "/mahasiswa"
+@inject MahasiswaService MahasiswaService
+@inject NavigationManager Navigation
+
+<PageTitle>Daftar Mahasiswa</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Daftar Mahasiswa</h1>
+    <button type="button" class="btn btn-primary" @onclick="TambahMahasiswa">
+        Tambah Mahasiswa
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <NotificationAlert Message="@_successMessage"
+                       Type="NotificationType.Success"
+                       OnDismiss="TutupPesanSukses" />
+}
+
+@if (!string.IsNullOrWhiteSpace(_actionError))
+{
+    <NotificationAlert Message="@_actionError"
+                       Type="NotificationType.Danger"
+                       OnDismiss="TutupPesanError" />
+}
+
+@if (_isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>Memuat data mahasiswa...</span>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <div class="alert alert-danger" role="alert">
+        @_loadError
+    </div>
+}
+else if (_mahasiswas.Count == 0)
+{
+    <div class="alert alert-info" role="alert">
+        Belum ada data mahasiswa. Klik <strong>Tambah Mahasiswa</strong> untuk menambahkan data.
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">NIM</th>
+                            <th scope="col">Nama</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Angkatan</th>
+                            <th scope="col">Dosen Wali</th>
+                            <th scope="col" class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mahasiswa in _mahasiswas)
+                        {
+                            <tr>
+                                <td>@mahasiswa.Nim</td>
+                                <td>@mahasiswa.NamaMahasiswa</td>
+                                <td>@mahasiswa.Email</td>
+                                <td>@mahasiswa.Angkatan</td>
+                                <td>@mahasiswa.NamaDosenWali</td>
+                                <td>
+                                    <div class="d-flex gap-2 justify-content-end text-nowrap">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                @onclick="() => EditMahasiswa(mahasiswa)">
+                                            Edit
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-danger"
+                                                disabled="@_isDeleting"
+                                                @onclick="() => MintaHapus(mahasiswa)">
+                                            Hapus
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_mahasiswaToDelete is not null)
+{
+    <div class="modal fade show d-block"
+         tabindex="-1"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="hapusMahasiswaLabel"
+         style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hapusMahasiswaLabel">Konfirmasi Hapus</h5>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Tutup"
+                            disabled="@_isDeleting"
+                            @onclick="BatalHapus"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Hapus mahasiswa <strong>@_mahasiswaToDelete.NamaMahasiswa</strong>?
+                        Tindakan ini tidak dapat dibatalkan.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            disabled="@_isDeleting"
+                            @onclick="BatalHapus">
+                        Batal
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            disabled="@_isDeleting"
+                            @onclick="KonfirmasiHapus">
+                        @(_isDeleting ? "Menghapus..." : "Hapus")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "hasil")]
+    public string? Hasil { get; set; }
+
+    private List<MahasiswaModel> _mahasiswas = new();
+    private MahasiswaModel? _mahasiswaToDelete;
+    private bool _isLoading;
+    private bool _isDeleting;
+    private bool _sudahMemuatAwal;
+    private string? _lastHandledHasil;
+    private string? _loadError;
+    private string? _actionError;
+    private string? _successMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Hasil))
+        {
+            _lastHandledHasil = null;
+
+            if (!_sudahMemuatAwal)
+            {
+                _sudahMemuatAwal = true;
+                await MuatMahasiswaAsync();
+            }
+
+            return;
+        }
+
+        if (string.Equals(Hasil, _lastHandledHasil, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _lastHandledHasil = Hasil;
+        _sudahMemuatAwal = true;
+
+        // Muat ulang agar daftar langsung mencerminkan data hasil tambah/edit.
+        await MuatMahasiswaAsync();
+
+        if (string.Equals(Hasil, "tambah", StringComparison.OrdinalIgnoreCase))
+        {
+            _successMessage = "Data mahasiswa berhasil ditambahkan.";
+        }
+        else if (string.Equals(Hasil, "edit", StringComparison.OrdinalIgnoreCase))
+        {
+            _successMessage = "Data mahasiswa berhasil diperbarui.";
+        }
+        else
+        {
+            return;
+        }
+
+        // Bersihkan query agar refresh tidak menampilkan pesan lagi.
+        Navigation.NavigateTo("/mahasiswa", replace: true);
+    }
+
+    private async Task MuatMahasiswaAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        _successMessage = null;
+        _actionError = null;
+
+        var result = await MahasiswaService.GetAllAsync();
+
+        if (result.IsSuccess)
+        {
+            _mahasiswas = result.Data;
+        }
+        else
+        {
+            _loadError = result.Error;
+        }
+
+        _isLoading = false;
+    }
+
+    private void TambahMahasiswa()
+    {
+        Navigation.NavigateTo("/mahasiswa/tambah");
+    }
+
+    private void EditMahasiswa(MahasiswaModel mahasiswa)
+    {
+        Navigation.NavigateTo($"/mahasiswa/edit/{mahasiswa.MahasiswaId}");
+    }
+
+    private void MintaHapus(MahasiswaModel mahasiswa)
+    {
+        _successMessage = null;
+        _actionError = null;
+        _mahasiswaToDelete = mahasiswa;
+    }
+
+    private void BatalHapus()
+    {
+        if (!_isDeleting)
+        {
+            _mahasiswaToDelete = null;
+        }
+    }
+
+    private async Task KonfirmasiHapus()
+    {
+        if (_mahasiswaToDelete is null || _isDeleting)
+        {
+            return;
+        }
+
+        var mahasiswa = _mahasiswaToDelete;
+        _isDeleting = true;
+        _successMessage = null;
+        _actionError = null;
+
+        try
+        {
+            var result = await MahasiswaService.DeleteAsync(mahasiswa.MahasiswaId);
+
+            if (result.IsSuccess)
+            {
+                _mahasiswaToDelete = null;
+                await MuatMahasiswaAsync();
+                _successMessage = $"Data mahasiswa {mahasiswa.NamaMahasiswa} berhasil dihapus.";
+            }
+            else
+            {
+                // Pesan API ditampilkan apa adanya.
+                _actionError = result.Error;
+                _mahasiswaToDelete = null;
+            }
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+
+    private void TutupPesanSukses() => _successMessage = null;
+    private void TutupPesanError() => _actionError = null;
+}

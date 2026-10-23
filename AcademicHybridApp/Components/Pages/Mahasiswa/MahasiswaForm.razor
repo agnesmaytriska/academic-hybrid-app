@@ -1,0 +1,279 @@
+@page "/mahasiswa/tambah"
+@page "/mahasiswa/edit/{Id:int}"
+@inject MahasiswaService MahasiswaService
+@inject DosenService DosenService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isEdit ? "Edit Mahasiswa" : "Tambah Mahasiswa")</PageTitle>
+
+<h1>@(_isEdit ? "Edit Mahasiswa" : "Tambah Mahasiswa")</h1>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <NotificationAlert Message="@_errorMessage"
+                       Type="NotificationType.Danger"
+                       OnDismiss="TutupPesanError" />
+}
+
+@if (_isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>Memuat data mahasiswa...</span>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <div class="alert alert-danger" role="alert">
+        @_loadError
+    </div>
+
+    <button type="button" class="btn btn-secondary" @onclick="Kembali">
+        Kembali ke Daftar
+    </button>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    @if (_isLoadingDosen)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span>Memuat data dosen...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_dosenLoadError))
+                    {
+                        <div class="alert alert-danger mb-0" role="alert">
+                            @_dosenLoadError
+                        </div>
+                    }
+                    else if (_dosens.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0" role="alert">
+                            Belum ada data dosen. Tambahkan data dosen terlebih dahulu sebelum menambahkan mahasiswa.
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="@_form" OnValidSubmit="SimpanAsync">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <div class="mb-3">
+                                <label class="form-label" for="nim">NIM</label>
+                                <InputText id="nim" class="form-control" @bind-Value="_form.Nim" />
+                                <ValidationMessage For="() => _form.Nim" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="namaMahasiswa">Nama Mahasiswa</label>
+                                <InputText id="namaMahasiswa" class="form-control" @bind-Value="_form.NamaMahasiswa" />
+                                <ValidationMessage For="() => _form.NamaMahasiswa" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="email">Email</label>
+                                <InputText id="email" class="form-control" @bind-Value="_form.Email" />
+                                <ValidationMessage For="() => _form.Email" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="angkatan">Angkatan</label>
+                                <InputNumber id="angkatan" class="form-control" @bind-Value="_form.Angkatan" />
+                                <ValidationMessage For="() => _form.Angkatan" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="dosenId">Dosen Wali</label>
+                                <InputSelect id="dosenId"
+                                             class="form-select"
+                                             @bind-Value="_form.DosenId"
+                                             disabled="@TidakBisaSimpan">
+                                    <option value="0">-- Pilih dosen wali --</option>
+                                    @foreach (var dosen in _dosens)
+                                    {
+                                        <option value="@dosen.DosenId">@dosen.NamaDosen</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _form.DosenId" />
+                            </div>
+
+                            <div class="d-flex gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary" disabled="@TidakBisaSimpan">
+                                    @(_isSaving ? "Menyimpan..." : "Simpan")
+                                </button>
+
+                                <button type="button" class="btn btn-secondary" disabled="@_isSaving" @onclick="Kembali">
+                                    Batal
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private MahasiswaFormModel _form = new();
+    private List<DosenModel> _dosens = new();
+    private bool _isEdit;
+    private bool _isLoading;
+    private bool _isLoadingDosen;
+    private bool _isSaving;
+    private bool _sudahMemuatDosen;
+    private int _loadedId = -1;
+    private string? _loadError;
+    private string? _dosenLoadError;
+    private string? _errorMessage;
+
+    private bool TidakBisaSimpan =>
+        _isSaving ||
+        _isLoadingDosen ||
+        !string.IsNullOrWhiteSpace(_dosenLoadError) ||
+        _dosens.Count == 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isEdit = Id > 0;
+
+        if (!_isEdit)
+        {
+            if (_loadedId != 0)
+            {
+                _form = new MahasiswaFormModel();
+                _loadedId = 0;
+                _errorMessage = null;
+            }
+
+            _loadError = null;
+            _isLoading = false;
+
+            if (!_sudahMemuatDosen)
+            {
+                _sudahMemuatDosen = true;
+                await MuatDosenAsync();
+            }
+
+            return;
+        }
+
+        if (_loadedId == Id)
+        {
+            return;
+        }
+
+        _loadedId = Id;
+        await MuatMahasiswaAsync();
+
+        if (string.IsNullOrWhiteSpace(_loadError) && !_sudahMemuatDosen)
+        {
+            _sudahMemuatDosen = true;
+            await MuatDosenAsync();
+        }
+    }
+
+    private async Task MuatMahasiswaAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        _errorMessage = null;
+        _form = new MahasiswaFormModel();
+
+        var result = await MahasiswaService.GetByIdAsync(Id);
+
+        if (result.IsSuccess)
+        {
+            _form = new MahasiswaFormModel
+            {
+                Nim = result.Data.Nim,
+                NamaMahasiswa = result.Data.NamaMahasiswa,
+                Email = result.Data.Email,
+                Angkatan = result.Data.Angkatan,
+                DosenId = result.Data.DosenId
+            };
+        }
+        else
+        {
+            _loadError = result.Error;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task MuatDosenAsync()
+    {
+        _isLoadingDosen = true;
+        _dosenLoadError = null;
+        _dosens = new List<DosenModel>();
+
+        var result = await DosenService.GetAllAsync();
+
+        if (result.IsSuccess)
+        {
+            _dosens = result.Data;
+        }
+        else
+        {
+            _dosenLoadError = result.Error;
+        }
+
+        _isLoadingDosen = false;
+    }
+
+    private async Task SimpanAsync()
+    {
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (_isEdit)
+            {
+                var result = await MahasiswaService.UpdateAsync(Id, _form);
+
+                if (result.IsSuccess)
+                {
+                    Navigation.NavigateTo("/mahasiswa?hasil=edit");
+                    return;
+                }
+
+                _errorMessage = result.Error;
+            }
+            else
+            {
+                var result = await MahasiswaService.CreateAsync(_form);
+
+                if (result.IsSuccess)
+                {
+                    Navigation.NavigateTo("/mahasiswa?hasil=tambah");
+                    return;
+                }
+
+                _errorMessage = result.Error;
+            }
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Kembali()
+    {
+        Navigation.NavigateTo("/mahasiswa");
+    }
+
+    private void TutupPesanError()
+    {
+        _errorMessage = null;
+    }
+}
