@@ -1,11 +1,30 @@
 using AcademicApi.Data;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Samakan format error validasi otomatis menjadi { "message": "..." }
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var pesanValidasi = context.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .ToList();
+
+            var message = pesanValidasi.Count > 0
+                ? string.Join(" ", pesanValidasi)
+                : "Data yang dikirim tidak valid.";
+
+            return new BadRequestObjectResult(new { message });
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
