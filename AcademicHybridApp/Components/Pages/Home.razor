@@ -4,20 +4,22 @@
 
 <PageTitle>Beranda</PageTitle>
 
-<div class="mb-4">
-    <h1>Sistem Informasi Akademik Sederhana</h1>
-    <p class="text-muted mb-0">
-        Ringkasan data dosen dan mahasiswa yang tersedia pada aplikasi akademik.
-    </p>
-</div>
+<PageHeader Title="Beranda"
+            Subtitle="Sistem Informasi Akademik Sederhana. Ringkasan data dosen dan mahasiswa." />
 
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-body d-flex flex-column">
-                <h2 class="h5 card-title">Jumlah Dosen</h2>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="summary-icon summary-icon-dosen" aria-hidden="true"></span>
+                    <div>
+                        <h2 class="h5 mb-1">Dosen</h2>
+                        <p class="text-muted small mb-0">Tenaga pengajar terdaftar</p>
+                    </div>
+                </div>
 
-                @if (_isLoading)
+                @if (_isLoadingDosen)
                 {
                     <div class="d-flex align-items-center gap-2 text-muted mb-3">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -26,19 +28,22 @@
                 }
                 else if (!string.IsNullOrWhiteSpace(_dosenError))
                 {
-                    <div class="alert alert-danger mb-3" role="alert">
-                        @_dosenError
-                    </div>
+                    <LoadErrorAlert Message="@_dosenError" OnRetry="MuatDosenAsync" />
                 }
                 else
                 {
                     <p class="display-6 mb-1">@_jumlahDosen</p>
-                    <p class="text-muted mb-3">Dosen terdaftar</p>
+                    <p class="text-muted mb-0">Total dosen</p>
                 }
 
-                <a href="dosen" class="btn btn-outline-primary mt-auto align-self-start">
-                    Lihat Dosen
-                </a>
+                <div class="d-flex flex-wrap gap-2 mt-auto pt-3">
+                    <NavLink href="dosen/tambah" Match="NavLinkMatch.All" class="btn btn-primary">
+                        Tambah Dosen
+                    </NavLink>
+                    <NavLink href="dosen" Match="NavLinkMatch.All" class="btn btn-outline-primary">
+                        Lihat Daftar
+                    </NavLink>
+                </div>
             </div>
         </div>
     </div>
@@ -46,9 +51,15 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-body d-flex flex-column">
-                <h2 class="h5 card-title">Jumlah Mahasiswa</h2>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="summary-icon summary-icon-mahasiswa" aria-hidden="true"></span>
+                    <div>
+                        <h2 class="h5 mb-1">Mahasiswa</h2>
+                        <p class="text-muted small mb-0">Mahasiswa terdaftar</p>
+                    </div>
+                </div>
 
-                @if (_isLoading)
+                @if (_isLoadingMahasiswa)
                 {
                     <div class="d-flex align-items-center gap-2 text-muted mb-3">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -57,26 +68,30 @@
                 }
                 else if (!string.IsNullOrWhiteSpace(_mahasiswaError))
                 {
-                    <div class="alert alert-danger mb-3" role="alert">
-                        @_mahasiswaError
-                    </div>
+                    <LoadErrorAlert Message="@_mahasiswaError" OnRetry="MuatMahasiswaAsync" />
                 }
                 else
                 {
                     <p class="display-6 mb-1">@_jumlahMahasiswa</p>
-                    <p class="text-muted mb-3">Mahasiswa terdaftar</p>
+                    <p class="text-muted mb-0">Total mahasiswa</p>
                 }
 
-                <a href="mahasiswa" class="btn btn-outline-primary mt-auto align-self-start">
-                    Lihat Mahasiswa
-                </a>
+                <div class="d-flex flex-wrap gap-2 mt-auto pt-3">
+                    <NavLink href="mahasiswa/tambah" Match="NavLinkMatch.All" class="btn btn-primary">
+                        Tambah Mahasiswa
+                    </NavLink>
+                    <NavLink href="mahasiswa" Match="NavLinkMatch.All" class="btn btn-outline-primary">
+                        Lihat Daftar
+                    </NavLink>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @code {
-    private bool _isLoading = true;
+    private bool _isLoadingDosen = true;
+    private bool _isLoadingMahasiswa = true;
     private int _jumlahDosen;
     private int _jumlahMahasiswa;
     private string? _dosenError;
@@ -84,39 +99,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _isLoading = true;
+        _isLoadingDosen = true;
+        _isLoadingMahasiswa = true;
         _dosenError = null;
         _mahasiswaError = null;
 
         try
         {
             // Kedua request independen, jadi jalankan paralel.
-            var tugasDosen = DosenService.GetAllAsync();
-            var tugasMahasiswa = MahasiswaService.GetAllAsync();
+            var tugasDosen = MuatDosenInternalAsync();
+            var tugasMahasiswa = MuatMahasiswaInternalAsync();
 
             await Task.WhenAll(tugasDosen, tugasMahasiswa);
-
-            var hasilDosen = await tugasDosen;
-
-            if (hasilDosen.IsSuccess)
-            {
-                _jumlahDosen = hasilDosen.Data.Count;
-            }
-            else
-            {
-                _dosenError = hasilDosen.Error;
-            }
-
-            var hasilMahasiswa = await tugasMahasiswa;
-
-            if (hasilMahasiswa.IsSuccess)
-            {
-                _jumlahMahasiswa = hasilMahasiswa.Data.Count;
-            }
-            else
-            {
-                _mahasiswaError = hasilMahasiswa.Error;
-            }
         }
         catch (Exception)
         {
@@ -135,7 +129,80 @@
         }
         finally
         {
-            _isLoading = false;
+            _isLoadingDosen = false;
+            _isLoadingMahasiswa = false;
+        }
+    }
+
+    private async Task MuatDosenAsync()
+    {
+        _isLoadingDosen = true;
+        _dosenError = null;
+
+        try
+        {
+            await MuatDosenInternalAsync();
+        }
+        catch (Exception)
+        {
+            if (string.IsNullOrWhiteSpace(_dosenError))
+            {
+                _dosenError = "Terjadi kesalahan saat memuat data.";
+            }
+        }
+        finally
+        {
+            _isLoadingDosen = false;
+        }
+    }
+
+    private async Task MuatDosenInternalAsync()
+    {
+        var hasil = await DosenService.GetAllAsync();
+
+        if (hasil.IsSuccess)
+        {
+            _jumlahDosen = hasil.Data.Count;
+        }
+        else
+        {
+            _dosenError = hasil.Error;
+        }
+    }
+
+    private async Task MuatMahasiswaAsync()
+    {
+        _isLoadingMahasiswa = true;
+        _mahasiswaError = null;
+
+        try
+        {
+            await MuatMahasiswaInternalAsync();
+        }
+        catch (Exception)
+        {
+            if (string.IsNullOrWhiteSpace(_mahasiswaError))
+            {
+                _mahasiswaError = "Terjadi kesalahan saat memuat data.";
+            }
+        }
+        finally
+        {
+            _isLoadingMahasiswa = false;
+        }
+    }
+
+    private async Task MuatMahasiswaInternalAsync()
+    {
+        var hasil = await MahasiswaService.GetAllAsync();
+
+        if (hasil.IsSuccess)
+        {
+            _jumlahMahasiswa = hasil.Data.Count;
+        }
+        else
+        {
+            _mahasiswaError = hasil.Error;
         }
     }
 }

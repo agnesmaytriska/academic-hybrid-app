@@ -3,9 +3,13 @@
 @inject DosenService DosenService
 @inject NavigationManager Navigation
 
-<PageTitle>@(_isEdit ? "Edit Dosen" : "Tambah Dosen")</PageTitle>
+<PageTitle>@JudulHalaman</PageTitle>
 
-<h1>@(_isEdit ? "Edit Dosen" : "Tambah Dosen")</h1>
+<PageHeader Title="@JudulHalaman" Subtitle="@SubjudulHalaman">
+    <button type="button" class="btn btn-outline-secondary" @onclick="Kembali">
+        Kembali
+    </button>
+</PageHeader>
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
@@ -16,25 +20,19 @@
 
 @if (_isLoading)
 {
-    <div class="d-flex align-items-center gap-2 text-muted">
+    <div class="d-flex align-items-center gap-2 text-muted py-3">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         <span>Memuat data dosen...</span>
     </div>
 }
 else if (!string.IsNullOrWhiteSpace(_loadError))
 {
-    <div class="alert alert-danger" role="alert">
-        @_loadError
-    </div>
-
-    <button type="button" class="btn btn-secondary" @onclick="Kembali">
-        Kembali ke Daftar
-    </button>
+    <LoadErrorAlert Message="@_loadError" />
 }
 else
 {
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-lg-8">
             <div class="card">
                 <div class="card-body">
                     <EditForm Model="@_form" OnValidSubmit="SimpanAsync">
@@ -65,12 +63,12 @@ else
                             <ValidationMessage For="() => _form.Prodi" />
                         </div>
 
-                        <div class="d-flex gap-2 mt-3">
+                        <div class="d-flex flex-wrap gap-2 mt-4">
                             <button type="submit" class="btn btn-primary" disabled="@_isSaving">
                                 @(_isSaving ? "Menyimpan..." : "Simpan")
                             </button>
 
-                            <button type="button" class="btn btn-secondary" disabled="@_isSaving" @onclick="Kembali">
+                            <button type="button" class="btn btn-outline-secondary" disabled="@_isSaving" @onclick="Kembali">
                                 Batal
                             </button>
                         </div>
@@ -92,6 +90,12 @@ else
     private int _loadedId = -1;
     private string? _loadError;
     private string? _errorMessage;
+
+    private string JudulHalaman => _isEdit ? "Edit Dosen" : "Tambah Dosen";
+
+    private string SubjudulHalaman => _isEdit
+        ? "Perbarui data dosen yang sudah terdaftar."
+        : "Lengkapi data dosen baru pada formulir berikut.";
 
     protected override async Task OnParametersSetAsync()
     {

@@ -4,9 +4,13 @@
 @inject DosenService DosenService
 @inject NavigationManager Navigation
 
-<PageTitle>@(_isEdit ? "Edit Mahasiswa" : "Tambah Mahasiswa")</PageTitle>
+<PageTitle>@JudulHalaman</PageTitle>
 
-<h1>@(_isEdit ? "Edit Mahasiswa" : "Tambah Mahasiswa")</h1>
+<PageHeader Title="@JudulHalaman" Subtitle="@SubjudulHalaman">
+    <button type="button" class="btn btn-outline-secondary" @onclick="Kembali">
+        Kembali
+    </button>
+</PageHeader>
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
@@ -17,25 +21,19 @@
 
 @if (_isLoading)
 {
-    <div class="d-flex align-items-center gap-2 text-muted">
+    <div class="d-flex align-items-center gap-2 text-muted py-3">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         <span>Memuat data mahasiswa...</span>
     </div>
 }
 else if (!string.IsNullOrWhiteSpace(_loadError))
 {
-    <div class="alert alert-danger" role="alert">
-        @_loadError
-    </div>
-
-    <button type="button" class="btn btn-secondary" @onclick="Kembali">
-        Kembali ke Daftar
-    </button>
+    <LoadErrorAlert Message="@_loadError" />
 }
 else
 {
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-lg-8">
             <div class="card">
                 <div class="card-body">
                     @if (_isLoadingDosen)
@@ -47,15 +45,16 @@ else
                     }
                     else if (!string.IsNullOrWhiteSpace(_dosenLoadError))
                     {
-                        <div class="alert alert-danger mb-0" role="alert">
-                            @_dosenLoadError
-                        </div>
+                        <LoadErrorAlert Message="@_dosenLoadError" OnRetry="MuatDosenAsync" />
                     }
                     else if (_dosens.Count == 0)
                     {
-                        <div class="alert alert-info mb-0" role="alert">
-                            Belum ada data dosen. Tambahkan data dosen terlebih dahulu sebelum menambahkan mahasiswa.
-                        </div>
+                        <EmptyState Title="Belum ada data dosen"
+                                    Description="Tambahkan data dosen terlebih dahulu sebelum membuat data mahasiswa.">
+                            <NavLink href="dosen/tambah" Match="NavLinkMatch.All" class="btn btn-primary">
+                                Tambah Dosen
+                            </NavLink>
+                        </EmptyState>
                     }
                     else
                     {
@@ -102,12 +101,12 @@ else
                                 <ValidationMessage For="() => _form.DosenId" />
                             </div>
 
-                            <div class="d-flex gap-2 mt-3">
+                            <div class="d-flex flex-wrap gap-2 mt-4">
                                 <button type="submit" class="btn btn-primary" disabled="@TidakBisaSimpan">
                                     @(_isSaving ? "Menyimpan..." : "Simpan")
                                 </button>
 
-                                <button type="button" class="btn btn-secondary" disabled="@_isSaving" @onclick="Kembali">
+                                <button type="button" class="btn btn-outline-secondary" disabled="@_isSaving" @onclick="Kembali">
                                     Batal
                                 </button>
                             </div>
@@ -134,6 +133,12 @@ else
     private string? _loadError;
     private string? _dosenLoadError;
     private string? _errorMessage;
+
+    private string JudulHalaman => _isEdit ? "Edit Mahasiswa" : "Tambah Mahasiswa";
+
+    private string SubjudulHalaman => _isEdit
+        ? "Perbarui data mahasiswa yang sudah terdaftar."
+        : "Lengkapi data mahasiswa baru pada formulir berikut.";
 
     private bool TidakBisaSimpan =>
         _isSaving ||

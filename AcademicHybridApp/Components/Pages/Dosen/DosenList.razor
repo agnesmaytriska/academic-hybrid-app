@@ -4,12 +4,12 @@
 
 <PageTitle>Daftar Dosen</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Daftar Dosen</h1>
+<PageHeader Title="Daftar Dosen"
+            Subtitle="Kelola data dosen yang terdaftar di sistem akademik.">
     <button type="button" class="btn btn-primary" @onclick="TambahDosen">
         Tambah Dosen
     </button>
-</div>
+</PageHeader>
 
 @if (!string.IsNullOrWhiteSpace(_successMessage))
 {
@@ -27,21 +27,26 @@
 
 @if (_isLoading)
 {
-    <div class="d-flex align-items-center gap-2 text-muted">
+    <div class="d-flex align-items-center gap-2 text-muted py-3">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         <span>Memuat data dosen...</span>
     </div>
 }
 else if (!string.IsNullOrWhiteSpace(_loadError))
 {
-    <div class="alert alert-danger" role="alert">
-        @_loadError
-    </div>
+    <LoadErrorAlert Message="@_loadError" OnRetry="MuatDosenAsync" />
 }
 else if (_dosens.Count == 0)
 {
-    <div class="alert alert-info" role="alert">
-        Belum ada data dosen. Klik <strong>Tambah Dosen</strong> untuk menambahkan data.
+    <div class="card">
+        <div class="card-body">
+            <EmptyState Title="Belum ada data dosen"
+                        Description="Tambahkan dosen pertama agar data dapat dikelola dari halaman ini.">
+                <button type="button" class="btn btn-primary" @onclick="TambahDosen">
+                    Tambah Dosen
+                </button>
+            </EmptyState>
+        </div>
     </div>
 }
 else
@@ -63,11 +68,13 @@ else
                         @foreach (var dosen in _dosens)
                         {
                             <tr>
-                                <td>@dosen.Nidn</td>
+                                <td class="text-nowrap">@dosen.Nidn</td>
                                 <td>@dosen.NamaDosen</td>
-                                <td>@dosen.Email</td>
-                                <td>@dosen.Prodi</td>
+                                <td class="text-break">@dosen.Email</td>
                                 <td>
+                                    <span class="badge badge-soft-primary">@dosen.Prodi</span>
+                                </td>
+                                <td class="text-end">
                                     <div class="d-flex gap-2 justify-content-end text-nowrap">
                                         <button type="button"
                                                 class="btn btn-sm btn-outline-primary"
@@ -75,7 +82,7 @@ else
                                             Edit
                                         </button>
                                         <button type="button"
-                                                class="btn btn-sm btn-danger"
+                                                class="btn btn-sm btn-outline-danger"
                                                 disabled="@_isDeleting"
                                                 @onclick="() => MintaHapus(dosen)">
                                             Hapus
