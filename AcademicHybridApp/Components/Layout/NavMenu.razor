@@ -1,6 +1,12 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">AcademicHybridApp</a>
+        <NavLink class="navbar-brand d-flex align-items-center gap-2" href="" Match="NavLinkMatch.All">
+            <span class="brand-icon" aria-hidden="true"></span>
+            <span class="lh-sm">
+                <span class="d-block fw-semibold">Sistem Informasi Akademik</span>
+                <span class="d-block brand-subtitle opacity-75">Dosen &amp; Mahasiswa</span>
+            </span>
+        </NavLink>
     </div>
 </div>
 
@@ -10,27 +16,17 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Beranda
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="dosen" Match="NavLinkMatch.Prefix">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Dosen
+                <span class="bi bi-person-badge-fill-nav-menu" aria-hidden="true"></span> Dosen
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="mahasiswa" Match="NavLinkMatch.Prefix">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Mahasiswa
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Mahasiswa
             </NavLink>
         </div>
     </nav>

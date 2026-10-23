@@ -1,0 +1,27 @@
+<div class="empty-state text-center">
+    <span class="empty-state-icon" aria-hidden="true"></span>
+    <h2 class="h5 mb-2">@Title</h2>
+
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p class="text-muted mb-3">@Description</p>
+    }
+
+    @if (ChildContent is not null)
+    {
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
