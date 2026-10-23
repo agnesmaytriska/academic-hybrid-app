@@ -7,13 +7,19 @@
 
 <h1>@(_isEdit ? "Edit Dosen" : "Tambah Dosen")</h1>
 
-<NotificationAlert Message="_errorMessage"
-                   Type="NotificationType.Danger"
-                   OnDismiss="TutupPesanError" />
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <NotificationAlert Message="@_errorMessage"
+                       Type="NotificationType.Danger"
+                       OnDismiss="TutupPesanError" />
+}
 
 @if (_isLoading)
 {
-    <p><em>Memuat data dosen...</em></p>
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>Memuat data dosen...</span>
+    </div>
 }
 else if (!string.IsNullOrWhiteSpace(_loadError))
 {
@@ -27,42 +33,52 @@ else if (!string.IsNullOrWhiteSpace(_loadError))
 }
 else
 {
-    <EditForm Model="_form" OnValidSubmit="SimpanAsync">
-        <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger" />
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <EditForm Model="@_form" OnValidSubmit="SimpanAsync">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
 
-        <div class="mb-3">
-            <label class="form-label" for="nidn">NIDN</label>
-            <InputText id="nidn" class="form-control" @bind-Value="_form.Nidn" />
-            <ValidationMessage For="() => _form.Nidn" />
+                        <div class="mb-3">
+                            <label class="form-label" for="nidn">NIDN</label>
+                            <InputText id="nidn" class="form-control" @bind-Value="_form.Nidn" />
+                            <ValidationMessage For="() => _form.Nidn" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="namaDosen">Nama Dosen</label>
+                            <InputText id="namaDosen" class="form-control" @bind-Value="_form.NamaDosen" />
+                            <ValidationMessage For="() => _form.NamaDosen" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="email">Email</label>
+                            <InputText id="email" class="form-control" @bind-Value="_form.Email" />
+                            <ValidationMessage For="() => _form.Email" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="prodi">Program Studi</label>
+                            <InputText id="prodi" class="form-control" @bind-Value="_form.Prodi" />
+                            <ValidationMessage For="() => _form.Prodi" />
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                @(_isSaving ? "Menyimpan..." : "Simpan")
+                            </button>
+
+                            <button type="button" class="btn btn-secondary" disabled="@_isSaving" @onclick="Kembali">
+                                Batal
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
         </div>
-
-        <div class="mb-3">
-            <label class="form-label" for="namaDosen">Nama Dosen</label>
-            <InputText id="namaDosen" class="form-control" @bind-Value="_form.NamaDosen" />
-            <ValidationMessage For="() => _form.NamaDosen" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label" for="email">Email</label>
-            <InputText id="email" class="form-control" @bind-Value="_form.Email" />
-            <ValidationMessage For="() => _form.Email" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label" for="prodi">Program Studi</label>
-            <InputText id="prodi" class="form-control" @bind-Value="_form.Prodi" />
-            <ValidationMessage For="() => _form.Prodi" />
-        </div>
-
-        <button type="submit" class="btn btn-primary" disabled="@_isSaving">
-            @(_isSaving ? "Menyimpan..." : "Simpan")
-        </button>
-
-        <button type="button" class="btn btn-secondary ms-2" disabled="@_isSaving" @onclick="Kembali">
-            Batal
-        </button>
-    </EditForm>
+    </div>
 }
 
 @code {
