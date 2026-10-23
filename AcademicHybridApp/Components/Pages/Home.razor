@@ -1,5 +1,141 @@
 ﻿@page "/"
+@inject DosenService DosenService
+@inject MahasiswaService MahasiswaService
 
-<h1>Hello, world!</h1>
+<PageTitle>Beranda</PageTitle>
 
-Welcome to your new app.
+<div class="mb-4">
+    <h1>Sistem Informasi Akademik Sederhana</h1>
+    <p class="text-muted mb-0">
+        Ringkasan data dosen dan mahasiswa yang tersedia pada aplikasi akademik.
+    </p>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h5 card-title">Jumlah Dosen</h2>
+
+                @if (_isLoading)
+                {
+                    <div class="d-flex align-items-center gap-2 text-muted mb-3">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Memuat data dosen...</span>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_dosenError))
+                {
+                    <div class="alert alert-danger mb-3" role="alert">
+                        @_dosenError
+                    </div>
+                }
+                else
+                {
+                    <p class="display-6 mb-1">@_jumlahDosen</p>
+                    <p class="text-muted mb-3">Dosen terdaftar</p>
+                }
+
+                <a href="dosen" class="btn btn-outline-primary mt-auto align-self-start">
+                    Lihat Dosen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h2 class="h5 card-title">Jumlah Mahasiswa</h2>
+
+                @if (_isLoading)
+                {
+                    <div class="d-flex align-items-center gap-2 text-muted mb-3">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Memuat data mahasiswa...</span>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_mahasiswaError))
+                {
+                    <div class="alert alert-danger mb-3" role="alert">
+                        @_mahasiswaError
+                    </div>
+                }
+                else
+                {
+                    <p class="display-6 mb-1">@_jumlahMahasiswa</p>
+                    <p class="text-muted mb-3">Mahasiswa terdaftar</p>
+                }
+
+                <a href="mahasiswa" class="btn btn-outline-primary mt-auto align-self-start">
+                    Lihat Mahasiswa
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private int _jumlahDosen;
+    private int _jumlahMahasiswa;
+    private string? _dosenError;
+    private string? _mahasiswaError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        _dosenError = null;
+        _mahasiswaError = null;
+
+        try
+        {
+            // Kedua request independen, jadi jalankan paralel.
+            var tugasDosen = DosenService.GetAllAsync();
+            var tugasMahasiswa = MahasiswaService.GetAllAsync();
+
+            await Task.WhenAll(tugasDosen, tugasMahasiswa);
+
+            var hasilDosen = await tugasDosen;
+
+            if (hasilDosen.IsSuccess)
+            {
+                _jumlahDosen = hasilDosen.Data.Count;
+            }
+            else
+            {
+                _dosenError = hasilDosen.Error;
+            }
+
+            var hasilMahasiswa = await tugasMahasiswa;
+
+            if (hasilMahasiswa.IsSuccess)
+            {
+                _jumlahMahasiswa = hasilMahasiswa.Data.Count;
+            }
+            else
+            {
+                _mahasiswaError = hasilMahasiswa.Error;
+            }
+        }
+        catch (Exception)
+        {
+            // Jaring pengaman jika service melempar exception tak terduga.
+            const string pesanUmum = "Terjadi kesalahan saat memuat data.";
+
+            if (string.IsNullOrWhiteSpace(_dosenError) && _jumlahDosen == 0)
+            {
+                _dosenError = pesanUmum;
+            }
+
+            if (string.IsNullOrWhiteSpace(_mahasiswaError) && _jumlahMahasiswa == 0)
+            {
+                _mahasiswaError = pesanUmum;
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
