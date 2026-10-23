@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using AcademicHybridApp.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AcademicHybridApp;
 
@@ -15,6 +16,14 @@ public static class MauiProgram
 			});
 
 		builder.Services.AddMauiBlazorWebView();
+
+		builder.Services.AddSingleton(_ => new HttpClient
+		{
+			BaseAddress = new Uri(ApiConfig.BaseUrl),
+			Timeout = TimeSpan.FromSeconds(15)
+		});
+		builder.Services.AddSingleton<DosenService>();
+		builder.Services.AddSingleton<MahasiswaService>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
